@@ -1,0 +1,14 @@
+name: ambra_downloader
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - selenium
+  - requests
+  - pwinput
+  - geckodriver
+  - firefox
+  - pip
+  - pip:
+      - undetected-chromedriver
