@@ -1,19 +1,27 @@
 import os
 import time
-import pwinput  # For masked password input
+# import pwinput  # For masked password input
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
+import json
 
-def is_download_complete(file_path):
-    """Check if the file has finished downloading."""
+
+def downloading(folder_path):
+    """Check if the folder contains any downloading temporary files."""
     temp_extensions = ['.crdownload', '.part', '.tmp']
-    return not any(os.path.exists(file_path + ext) for ext in temp_extensions)
+    for file_name in os.listdir(folder_path):
+        if any(file_name.endswith(ext) for ext in temp_extensions):
+            return True
+    return False
 
+
+login = json.load(open('login.json'))
 # ✅ Prompt user for login credentials
-email = input("Enter your email: ")
-password = pwinput.pwinput("Enter your password: ", mask="*")  # Shows **** while typing
+email = login['email']
+password = login['password']  # Shows **** while typing
 download_dir = input("Enter the directory to save downloads (default: downloads/test): ") or "downloads/test"
+download_number = int(input("Enter the number of files to download (default: 5): ") or "5")
 
 # Ensure the directory exists
 os.makedirs(download_dir, exist_ok=True)
@@ -45,34 +53,35 @@ submit_button.click()
 # ✅ Wait for login to complete
 time.sleep(10)  # Adjust timing if needed
 
-page = 1
-while True:
-    print(f"📄 Downloading files from Page {page}...")
 
-    # ✅ Find files to download
+
+current_download = 0
+page_max = 5
+while current_download < download_number:
+
     checkboxes = driver.find_elements(By.TAG_NAME, "tbody")
-    print(f"🔍 Found {len(checkboxes)} checkboxes.")
-
-    # ✅ Download files
     for cb in checkboxes:
+        
         download_button = cb.find_elements(By.TAG_NAME, "button")
         if len(download_button) > 1:  # Ensure there is a second button
-            print("📥 Downloading file...")
+            print("Downloading file...--->",current_download + 1, 'of', download_number)
             download_button[1].click()
-            time.sleep(5)  # Adjust based on download speed
+            time.sleep(5)
+            while downloading(download_dir):
+                print('Waiting for download to complete...--->', current_download + 1, 'of', download_number)
+                time.sleep(2)
+            current_download += 1
+            if current_download >= download_number:
+                print('Downloaded all files requested.')
+                driver.quit()
+                exit()
+    if current_download % page_max == 0:
+        nav = driver.find_elements(By.CLASS_NAME, 'pagination-controls')
+        next_page = nav[0].find_elements(By.TAG_NAME, 'span')
+        next_page[-1].click()
+        time.sleep(5)
 
-    print(f"✅ Page {page} downloads complete.")
 
-    # ✅ Ask user to manually change pages
-    print("\n🔄 Please manually navigate to the next page in the browser.")
-    next_page = input("➡️ Once done, press Enter to continue, or type 'exit' to quit: ").strip().lower()
-    
-    if next_page == "exit":
-        print("🚪 Exiting...")
-        break
 
-    page += 1  # Increment page number
 
-print("✅ All downloads complete. Browser will remain open.")
-input("Press Enter to close the browser...")  # Keeps browser open until user presses Enter
 driver.quit()
