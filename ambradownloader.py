@@ -15,8 +15,6 @@ email = input("Enter your email: ")
 password = pwinput.pwinput("Enter your password: ", mask="*")  # Shows **** while typing
 download_dir = input("Enter the directory to save downloads (default: downloads/test): ") or "downloads/test"
 
-
-
 # Ensure the directory exists
 os.makedirs(download_dir, exist_ok=True)
 
