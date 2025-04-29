@@ -5,6 +5,18 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 import json
+import glob
+
+def delete_latest_files(download_dir, num_files=2):
+    list_of_files = glob.glob(os.path.join(download_dir, '*'))
+    if list_of_files:
+        latest_files = sorted(list_of_files, key=os.path.getctime, reverse=True)[:num_files]
+        for file in latest_files:
+            try:
+                os.remove(file)
+                print(f"Deleted file: {file}")
+            except Exception as e:
+                print(f"Error deleting file: {file}, {e}")
 
 
 def downloading(folder_path):
@@ -20,7 +32,7 @@ login = json.load(open('login.json'))
 # ✅ Prompt user for login credentials
 email = login['email']
 password = login['password']  # Shows **** while typing
-download_dir = input("Enter the directory to save downloads (default: downloads/test): ") or "downloads/test"
+download_dir = input("Enter the         `directory to save downloads (default: downloads/test): ") or "downloads/test"
 download_number = int(input("Enter the number of files to download (default: 5): ") or "5")
 
 # Ensure the directory exists
@@ -31,6 +43,7 @@ firefox_options = Options()
 firefox_options.set_preference("browser.download.folderList", 2)  # Use custom directory
 firefox_options.set_preference("browser.download.dir", os.path.abspath(download_dir))
 firefox_options.set_preference("browser.download.useDownloadDir", True)
+
 firefox_options.set_preference("browser.helperApps.neverAsk.saveToDisk", 
                                "application/pdf, application/octet-stream, application/vnd.ms-excel, text/csv")  
 firefox_options.set_preference("pdfjs.disabled", True)  # Disable built-in PDF viewer
@@ -51,12 +64,12 @@ password_field.send_keys(password)
 submit_button.click()
 
 # ✅ Wait for login to complete
-time.sleep(10)  # Adjust timing if needed
+time.sleep(30)  # Adjust timing if needed
 
 
-
+timeout = 500  # Set your timeout duration in seconds
 current_download = 0
-page_max = 5
+page_max = 100
 while current_download < download_number:
 
     checkboxes = driver.find_elements(By.TAG_NAME, "tbody")
@@ -66,8 +79,14 @@ while current_download < download_number:
         if len(download_button) > 1:  # Ensure there is a second button
             print("Downloading file...--->",current_download + 1, 'of', download_number)
             download_button[1].click()
-            time.sleep(5)
+            start_time = time.time()
+            time.sleep(15)
             while downloading(download_dir):
+                elapsed_time = time.time() - start_time
+                if elapsed_time > timeout:
+                    print(f"Download timed out after {timeout} seconds.")
+                    delete_latest_files(download_dir)
+                    break
                 print('Waiting for download to complete...--->', current_download + 1, 'of', download_number)
                 time.sleep(2)
             current_download += 1
